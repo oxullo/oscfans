@@ -13,6 +13,8 @@
 const char* VERSION = "v0.1.0";
 const uint32_t MODBUS_BAUDRATE = 9600;
 const uint8_t FANS_COUNT = 2;
+const uint8_t MODBUS_ADDR_MAP[] = {1, 2};
+const uint16_t MODBUS_FREQSETPOINT_REGADDR = 40003; // cvt=2 modbus=40003 -> HSW
 const uint16_t OSC_PORT = 8888;
 
 
@@ -25,22 +27,27 @@ EthernetUDP osc_socket;
 
 void pre_tx()
 {
-  digitalWrite(AIO::RS485_RX_EN_PIN, HIGH);
-  digitalWrite(AIO::RS485_TX_EN_PIN, HIGH);
+    digitalWrite(AIO::RS485_RX_EN_PIN, HIGH);
+    digitalWrite(AIO::RS485_TX_EN_PIN, HIGH);
 }
 
 void post_tx()
 {
-  digitalWrite(AIO::RS485_RX_EN_PIN, LOW);
-  digitalWrite(AIO::RS485_TX_EN_PIN, LOW);
+    digitalWrite(AIO::RS485_RX_EN_PIN, LOW);
+    digitalWrite(AIO::RS485_TX_EN_PIN, LOW);
 }
 
-void set_fans(OSCMessage& msg)
+void set_fan(OSCMessage& msg, int address)
 {
-    Serial.print("set_fans f0=");
-    Serial.print(msg.getFloat(0));
-    Serial.print("% f1=");
-    Serial.println(msg.getFloat(1));
+    float speed = msg.getFloat(0);
+    Serial.print("set_fan id=");
+    Serial.print(address);
+    Serial.print(" speed=");
+    Serial.println(speed);
+
+    speed = min(max(speed, 0), 100);
+
+    fans[address].writeSingleRegister(MODBUS_FREQSETPOINT_REGADDR, speed);
 }
 
 void setup()
@@ -53,7 +60,7 @@ void setup()
     pinMode(AIO::RS485_TX_EN_PIN, OUTPUT);
 
     for (uint8_t i = 0; i < FANS_COUNT; ++i) {
-        fans[i].begin(i + 1, Serial1);
+        fans[i].begin(MODBUS_ADDR_MAP[i], Serial1);
         fans[i].preTransmission(pre_tx);
         fans[i].postTransmission(post_tx);
     }
@@ -61,7 +68,7 @@ void setup()
     Ethernet.begin(mac, ip);
     osc_socket.begin(OSC_PORT);
 
-    Serial.print("oscfans ");
+    Serial.print("OSCfans ");
     Serial.println(VERSION);
 }
 
@@ -79,7 +86,7 @@ void loop()
         if (bundle.hasError()) {
             Serial.println("OSC Packet error");
         } else {
-            bundle.dispatch("/s", set_fans);
+            bundle.route("/s", set_fan);
         }
     }
 
