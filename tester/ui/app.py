@@ -17,13 +17,19 @@ class Sender(Window):
         self._speed = 0
         self._enabled = False
 
-    def send(self):
+    def periodic_send(self):
         if self._enabled:
-            self._client.send_message(f'/s/{self._id}', self._speed)
+            self._send()
+
+    def _send(self):
+        self._client.send_message(f'/s/{self._id}', self._speed)
 
     def _on_frame(self):
-        _, self._enabled = imgui.checkbox('Enable send', self._enabled)
-        changed, speed = imgui.slider_float('Fan speed', self._speed, 0, 100)
+        _, self._enabled = imgui.checkbox('Enable periodic send', self._enabled)
+        changed, self._speed = imgui.slider_float('Fan speed', self._speed, 0, 100)
+
+        if changed:
+            self._send()
 
 
 class DemoApp(App):
@@ -50,7 +56,7 @@ class DemoApp(App):
 
     def _on_timer(self):
         for sender in self._senders:
-            sender.send()
+            sender.periodic_send()
 
 
 @click.command()
