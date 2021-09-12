@@ -1,0 +1,4 @@
+git+ssh://git@bitbucket.archimedes-exhibitions.de:7999/alib3/aimgui.git#egg=aimgui
+glfw
+python-osc
+Click
