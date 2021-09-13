@@ -15,11 +15,12 @@ const uint32_t MODBUS_BAUDRATE = 9600;
 const uint8_t FANS_COUNT = 2;
 const uint8_t MODBUS_ADDR_MAP[] = {1, 2};
 const uint16_t MODBUS_FREQSETPOINT_REGADDR = 40003; // cvt=2 modbus=40003 -> HSW
+const uint16_t MODBUS_RUN_REGADDR = 40004; // cvt=3 -> STW:3
 const uint16_t OSC_PORT = 8888;
 
 typedef enum State {
     STATE_INIT,
-    STATE_WAIT_FOR_LINK,
+    STATE_WAIT_FOR_ETHLINK,
     STATE_READY
 } State;
 
@@ -43,18 +44,65 @@ void post_tx()
     digitalWrite(AIO::RS485_TX_EN_PIN, LOW);
 }
 
-void set_fan(OSCMessage& msg, int address)
+void update_fan_speed(uint8_t index, uint8_t speed)
 {
-    float speed = msg.getFloat(0);
-    Serial.print("set_fan id=");
-    Serial.print(address);
+    uint8_t rc = fans[index].writeSingleRegister(MODBUS_FREQSETPOINT_REGADDR, speed);
+
+    if (rc) {
+        Serial.print("ERR: cannot update fan speed idx=");
+        Serial.print(index);
+        Serial.print(" speed=");
+        Serial.print(speed);
+        Serial.print(" rc=");
+        Serial.println(rc);
+    }
+}
+
+void set_fan1(OSCMessage& msg)
+{
+    int speed = msg.getInt(0);
+
+    Serial.print("set_fan id=1");
     Serial.print(" speed=");
     Serial.println(speed);
 
     // Clamp to range [0..100]
     speed = min(max(speed, 0), 100);
 
-    fans[address].writeSingleRegister(MODBUS_FREQSETPOINT_REGADDR, speed);
+    update_fan_speed(0, speed);
+}
+
+void set_fan2(OSCMessage& msg)
+{
+    int speed = msg.getInt(0);
+
+    Serial.print("set_fan id=2");
+    Serial.print(" speed=");
+    Serial.println(speed);
+
+    // Clamp to range [0..100]
+    speed = min(max(speed, 0), 100);
+
+    update_fan_speed(1, speed);
+}
+
+void enable(OSCMessage& msg)
+{
+    int enabled = msg.getInt(0);
+    Serial.print("Enable: ");
+    Serial.println(enabled);
+
+    for (uint8_t i=0 ; i < FANS_COUNT ; ++i) {
+        uint8_t rc = fans[i].writeSingleRegister(MODBUS_RUN_REGADDR, enabled);
+        if (rc) {
+            Serial.print("ERR: cannot set enable=");
+            Serial.print(enabled);
+            Serial.print(" fan idx=");
+            Serial.print(i);
+            Serial.print(" rc=");
+            Serial.println(rc);
+        }
+    }
 }
 
 void change_state(State new_state)
@@ -109,13 +157,13 @@ void setup()
     Serial.print("OSC endpoint port: ");
     Serial.println(OSC_PORT);
 
-    change_state(STATE_WAIT_FOR_LINK);
+    change_state(STATE_WAIT_FOR_ETHLINK);
 }
 
 void loop()
 {
     switch (state) {
-        case STATE_WAIT_FOR_LINK:
+        case STATE_WAIT_FOR_ETHLINK:
             if (Ethernet.linkStatus() == LinkON) {
                 change_state(STATE_READY);
             }
@@ -123,25 +171,27 @@ void loop()
 
         case STATE_READY:
         {
-            OSCBundle bundle;
+            OSCMessage msg;
 
             int packet_len = osc_socket.parsePacket();
 
             if (packet_len > 0) {
-                Serial.println(packet_len);
+
                 while (packet_len--) {
-                    bundle.fill(osc_socket.read());
+                    msg.fill(osc_socket.read());
                 }
 
-                if (bundle.hasError()) {
+                if (msg.hasError()) {
                     Serial.println("OSC Packet error");
                 } else {
-                    bundle.route("/s", set_fan);
+                    msg.dispatch("/s/1", set_fan1);
+                    msg.dispatch("/s/2", set_fan2);
+                    msg.dispatch("/enable", enable);
                 }
             }
 
             if (Ethernet.linkStatus() == LinkOFF) {
-                change_state(STATE_WAIT_FOR_LINK);
+                change_state(STATE_WAIT_FOR_ETHLINK);
             }
         }
         break;
