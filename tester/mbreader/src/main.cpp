@@ -140,14 +140,26 @@ void setup()
     vfd.preTransmission(pre_tx);
     vfd.postTransmission(post_tx);
 
-    write_reg(S2R_WD_TIME, 0);
+    write_reg(S2R_WD_TIME, 2000);
 
     Serial.println("Init completed");
+}
+
+void update_control(bool start, uint16_t setpoint)
+{
+    vfd.setTransmitBuffer(0, start ? 0x047F : 0x047E);
+    vfd.setTransmitBuffer(1, setpoint);
+    uint8_t rc = vfd.writeMultipleRegisters(S2R_STW, 2);
+
+    if (rc != vfd.ku8MBSuccess) {
+        Serial.println("UC err");
+    }
 }
 
 void loop()
 {
     static bool update = false;
+    static bool enable = false;
     static uint16_t setpoint = 0;
     static uint32_t ts_last_setpoint = 0;
 
@@ -190,22 +202,32 @@ void loop()
                     write_reg(S2R_STW, 1151);
                     break;
 
-                case 'e':
+                case 'E':
                     Serial.println("Enabling");
-                    write_reg(S2R_STW, 0x47E);
+                    enable = true;
+                    break;
+
+                case 'e':
+                    Serial.println("Disabling");
+                    enable = false;
                     break;
 
                 case 'w':
                     Serial.println("Starting");
-                    write_reg(S2R_STW, 0x47F);
-                    update = true;
+                    enable = false;
                     break;
 
                 case 'U':
+                    Serial.println("Start updating STW");
                     update = true;
+                    write_reg(S2R_FAULT_ACK, 0);
+                    delay(10);
+                    write_reg(S2R_FAULT_ACK, 1);
+                    delay(5);
                     break;
 
                 case 'u':
+                    Serial.println("Stop updating STW");
                     update = false;
                     break;
 
@@ -223,8 +245,8 @@ void loop()
     }
 
     if (update && millis() - ts_last_setpoint > 100) {
-        write_reg(S2R_FREQ_SETPOINT, setpoint);
-        // update_control(setpoint);
+        // write_reg(S2R_FREQ_SETPOINT, setpoint);
+        update_control(enable, setpoint);
         ts_last_setpoint = millis();
     }
 }
