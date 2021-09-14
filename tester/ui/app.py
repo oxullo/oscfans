@@ -41,7 +41,7 @@ class Sender(Window):
 
     def _on_frame(self):
         _, self._enabled = imgui.checkbox('Enable periodic send', self._enabled)
-        changed, self._speed = imgui.slider_int('Fan speed', self._speed, 0, 100)
+        changed, self._speed = imgui.slider_float('Fan speed', self._speed, 0, 100)
 
         if changed:
             self._send()
