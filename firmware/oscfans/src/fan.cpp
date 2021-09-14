@@ -15,20 +15,19 @@
 
 namespace {
 
-const uint32_t TELEGRAM_SEND_DELAY_US = 10000;
+const uint32_t TELEGRAM_PAUSE = 2;
+const uint16_t MODBUS_RESPONSE_TIMEOUT = 100;
 
 void pre_tx()
 {
     digitalWrite(AIO::RS485_RX_EN_PIN, HIGH);
     digitalWrite(AIO::RS485_TX_EN_PIN, HIGH);
-    delay(2);
 }
 
 void post_tx()
 {
     digitalWrite(AIO::RS485_RX_EN_PIN, LOW);
     digitalWrite(AIO::RS485_TX_EN_PIN, LOW);
-    delay(2);
 }
 
 }
@@ -45,7 +44,7 @@ Fan::Fan() :
 void Fan::begin(uint8_t addr_)
 {
     addr = addr_;
-    bus.begin(addr_, Serial1);
+    bus.begin(addr_, Serial1, MODBUS_RESPONSE_TIMEOUT);
     bus.preTransmission(pre_tx);
     bus.postTransmission(post_tx);
 }
@@ -62,26 +61,20 @@ void Fan::set_setpoint(uint16_t setpoint_)
 
 bool Fan::update()
 {
-//    if (micros() - tsu_last_telegram > TELEGRAM_SEND_DELAY_US) {
-//        Serial.print(".");
-        // 0x047E: disable offs, enable operations
-        // 0x047F: as above, plus run bit
-        bus.setTransmitBuffer(0, run ? 0x047F : 0x047E);
-        bus.setTransmitBuffer(1, setpoint);
-        uint8_t rc = bus.writeMultipleRegisters(S2R_STW, 2);
-
-        tsu_last_telegram = micros();
+    // 0x047E: disable offs, enable operations
+    // 0x047F: as above, plus run bit
+    bus.setTransmitBuffer(0, run ? 0x047F : 0x047E);
+    bus.setTransmitBuffer(1, setpoint);
+    uint8_t rc = bus.writeMultipleRegisters(S2R_STW, 2);
 
 #ifdef DEBUG
-        if (rc != bus.ku8MBSuccess) {
-            Serial.print("E01 addr=");
-            Serial.println(addr);
-        }
+    if (rc != bus.ku8MBSuccess) {
+        Serial.print("E01 addr=");
+        Serial.println(addr);
+    }
 #endif
-        return rc == bus.ku8MBSuccess;
-//    } else {
-//        return true;
-//    }
+
+    return rc == bus.ku8MBSuccess;
 }
 
 bool Fan::reset()
@@ -131,7 +124,6 @@ bool Fan::write_reg(SV20Reg regaddr, uint16_t value)
     uint8_t rc;
 
     for (uint8_t i=0 ; i < 3 ; ++i) {
-        wait_deadtime();
         rc = bus.writeSingleRegister(regaddr, value);
         if (rc == bus.ku8MBSuccess) {
             return true;
@@ -148,12 +140,13 @@ bool Fan::write_reg(SV20Reg regaddr, uint16_t value)
 #endif
     }
 
+    delay(TELEGRAM_PAUSE);
+
     return false;
 }
 
 bool Fan::read_reg(SV20Reg regaddr, uint16_t* value)
 {
-    wait_deadtime();
     uint8_t rc = bus.readHoldingRegisters(regaddr, 1);
 
     if (rc == bus.ku8MBSuccess) {
@@ -167,6 +160,8 @@ bool Fan::read_reg(SV20Reg regaddr, uint16_t* value)
             Serial.println(rc);
         }
 #endif
+
+    delay(TELEGRAM_PAUSE);
 
     return rc;
 }
@@ -185,12 +180,4 @@ void Fan::dump_reg(SV20Reg regaddr, const char* identifier)
     } else {
         Serial.println("ERR");
     }
-}
-
-void Fan::wait_deadtime()
-{
-    delay(10);
-//    if (micros() - tsu_last_telegram < TELEGRAM_SEND_DELAY_US) {
-//        delayMicroseconds(TELEGRAM_SEND_DELAY_US - (micros() - tsu_last_telegram));
-//    }
 }

@@ -55,7 +55,6 @@ private:
     bool read_reg(SV20Reg regaddr, uint16_t* value);
     bool write_reg(SV20Reg regaddr, uint16_t value);
     void dump_reg(SV20Reg regaddr, const char* identifier);
-    void wait_deadtime();
 
     ModbusMaster bus;
     uint8_t addr;

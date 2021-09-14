@@ -9,15 +9,11 @@
 #include <OSCBoards.h>
 
 
-#include "fan.h"
+#include "fanscontroller.h"
 
 
 const char* VERSION = "v0.1.0";
 const uint32_t MODBUS_BAUDRATE = 115200;
-const uint8_t FANS_COUNT = 2;
-const uint8_t MODBUS_ADDR_MAP[] = {1, 2};
-const uint16_t MODBUS_FREQSETPOINT_REGADDR = 2; // cvt=2 modbus=40003 -> HSW
-const uint16_t MODBUS_RUN_REGADDR = 3; // cvt=3 -> STW:3
 const uint16_t OSC_PORT = 8888;
 const uint32_t HEARTBEAT_PERIOD = 200;
 
@@ -29,6 +25,7 @@ typedef enum State {
 } State;
 
 Fan fans[FANS_COUNT];
+FansController fans_controller;
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 1, 20);
@@ -44,12 +41,7 @@ void set_fan1(OSCMessage& msg)
     Serial.print(" speed=");
     Serial.println(speed);
 
-    // Clamp to range [0..100]
-    speed = min(max(speed, 0), 100) / 100.0 * 16383;
-
-    fans[0].set_setpoint(speed);
-
-//    update_fan_speed(0, speed);
+    fans_controller.set_setpoint_percent(1, speed);
 }
 
 void set_fan2(OSCMessage& msg)
@@ -60,12 +52,7 @@ void set_fan2(OSCMessage& msg)
     Serial.print(" speed=");
     Serial.println(speed);
 
-    // Clamp to range [0..100]
-    speed = min(max(speed, 0), 100) / 100.0 * 16383;
-
-    fans[1].set_setpoint(speed);
-
-//    update_fan_speed(1, speed);
+    fans_controller.set_setpoint_percent(2, speed);
 }
 
 void enable(OSCMessage& msg)
@@ -75,8 +62,7 @@ void enable(OSCMessage& msg)
     Serial.print("Set run=");
     Serial.println(run);
 
-    fans[0].set_enabled(run);
-    fans[1].set_enabled(run);
+    fans_controller.enable(run);
 }
 
 
@@ -111,16 +97,16 @@ void handle_state()
             if (Ethernet.linkStatus() == LinkON) {
                 change_state(STATE_READY);
             }
-            fans[0].reset();
-            fans[1].reset();
+            fans_controller.reset();
 
             break;
 
         case STATE_READY:
             {
                 OSCMessage msg;
-                int packet_len = osc_socket.parsePacket();
-                if (packet_len > 0) {
+                int packet_len;
+
+                while ((packet_len = osc_socket.parsePacket()) > 0) {
                     while (packet_len--) {
                         msg.fill(osc_socket.read());
                     }
@@ -179,10 +165,10 @@ void setup()
     Serial.print("OSC endpoint port: ");
     Serial.println(OSC_PORT);
 
-    for (uint8_t i = 0; i < FANS_COUNT; ++i) {
-        fans[i].begin(MODBUS_ADDR_MAP[i]);
-        fans[i].dump_opregs();
-    }
+    Serial.println("Initializing fans controllers");
+    fans_controller.begin();
+
+    Serial.println("Initialization done");
 
     change_state(STATE_WAIT_FOR_ETHLINK);
 }
@@ -190,7 +176,6 @@ void setup()
 void loop()
 {
     handle_state();
+    fans_controller.update();
     heartbeat();
-    fans[0].update();
-//    fans[1].update();
 }
