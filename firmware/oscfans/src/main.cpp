@@ -37,9 +37,11 @@ void set_fan1(OSCMessage& msg)
 {
     float speed = msg.getFloat(0);
 
+#ifdef DEBUG
     Serial.print("set_fan id=1");
     Serial.print(" speed=");
     Serial.println(speed);
+#endif
 
     fans_controller.set_setpoint_percent(1, speed);
 }
@@ -48,9 +50,11 @@ void set_fan2(OSCMessage& msg)
 {
     float speed = msg.getFloat(0);
 
+#ifdef DEBUG
     Serial.print("set_fan id=2");
     Serial.print(" speed=");
     Serial.println(speed);
+#endif
 
     fans_controller.set_setpoint_percent(2, speed);
 }
@@ -96,8 +100,8 @@ void handle_state()
         case STATE_WAIT_FOR_ETHLINK:
             if (Ethernet.linkStatus() == LinkON) {
                 change_state(STATE_READY);
+                fans_controller.reset();
             }
-            fans_controller.reset();
 
             break;
 

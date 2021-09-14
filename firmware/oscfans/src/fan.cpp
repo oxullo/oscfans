@@ -10,8 +10,6 @@
 
 #include "fan.h"
 
-#define DEBUG
-
 
 namespace {
 
@@ -125,12 +123,18 @@ bool Fan::write_reg(SV20Reg regaddr, uint16_t value)
 
     for (uint8_t i=0 ; i < 3 ; ++i) {
         rc = bus.writeSingleRegister(regaddr, value);
+        delay(TELEGRAM_PAUSE);
+
         if (rc == bus.ku8MBSuccess) {
             return true;
         }
 #ifdef DEBUG
         else {
-            Serial.print("E wr a=");
+            Serial.print("E wr unit=");
+            Serial.print(addr);
+            Serial.print(" rtr=");
+            Serial.print(i);
+            Serial.print(" ra=");
             Serial.print(regaddr);
             Serial.print(" v=");
             Serial.print(value);
@@ -139,8 +143,6 @@ bool Fan::write_reg(SV20Reg regaddr, uint16_t value)
         }
 #endif
     }
-
-    delay(TELEGRAM_PAUSE);
 
     return false;
 }
@@ -154,7 +156,9 @@ bool Fan::read_reg(SV20Reg regaddr, uint16_t* value)
     }
 #ifdef DEBUG
         else {
-            Serial.print("E rr a=");
+            Serial.print("E rr unit=");
+            Serial.print(addr);
+            Serial.print(" ra=");
             Serial.print(regaddr);
             Serial.print(" rc=");
             Serial.println(rc);

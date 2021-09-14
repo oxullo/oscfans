@@ -32,6 +32,7 @@ void FansController::reset()
     for (uint8_t i = 0; i < FANS_COUNT; ++i) {
         fans[i].reset();
     }
+    delay(10);
 }
 
 void FansController::enable(bool run)
