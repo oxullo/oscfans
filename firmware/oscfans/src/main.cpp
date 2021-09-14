@@ -33,30 +33,27 @@ EthernetUDP osc_socket;
 State state = STATE_INIT;
 
 
-void set_fan1(OSCMessage& msg)
+void set_setpoint(OSCMessage& msg, int addr_offset)
 {
+    uint8_t addr;
+    if (msg.match("/1", addr_offset)) {
+        addr = 1;
+    } else if (msg.match("/2", addr_offset)) {
+        addr = 2;
+    } else {
+        Serial.println("Invalid address");
+        return;
+    }
     float speed = msg.getFloat(0);
 
 #ifdef DEBUG
-    Serial.print("set_fan id=1");
+    Serial.print("setpoint addr=");
+    Serial.print(addr);
     Serial.print(" speed=");
     Serial.println(speed);
 #endif
 
-    fans_controller.set_setpoint_percent(1, speed);
-}
-
-void set_fan2(OSCMessage& msg)
-{
-    float speed = msg.getFloat(0);
-
-#ifdef DEBUG
-    Serial.print("set_fan id=2");
-    Serial.print(" speed=");
-    Serial.println(speed);
-#endif
-
-    fans_controller.set_setpoint_percent(2, speed);
+    fans_controller.set_setpoint_percent(addr, speed);
 }
 
 void enable(OSCMessage& msg)
@@ -121,8 +118,7 @@ void handle_state()
                         // Deassert error and toggle OSC packet receive
                         digitalWrite(AIO::LED_RED, LOW);
                         digitalWrite(AIO::LED_BLUE, !digitalRead(AIO::LED_BLUE));
-                        msg.dispatch("/s/1", set_fan1);
-                        msg.dispatch("/s/2", set_fan2);
+                        msg.route("/s", set_setpoint);
                         msg.dispatch("/enable", enable);
                     }
                 }
