@@ -41,9 +41,12 @@ void set_setpoint(OSCMessage& msg, int addr_offset)
     } else if (msg.match("/2", addr_offset)) {
         addr = 2;
     } else {
-        Serial.println("Invalid address");
+        Serial.println("Invalid OSC address");
+        digitalWrite(AIO::LED_RED, HIGH);
         return;
     }
+    digitalWrite(AIO::LED_RED, LOW);
+
     float speed = msg.getFloat(0);
 
 #ifdef DEBUG
@@ -62,6 +65,8 @@ void enable(OSCMessage& msg)
 
     Serial.print("Set run=");
     Serial.println(run);
+
+    digitalWrite(AIO::LED_BLUE, run);
 
     fans_controller.enable(run);
 }
@@ -116,8 +121,6 @@ void handle_state()
                         digitalWrite(AIO::LED_RED, HIGH);
                     } else {
                         // Deassert error and toggle OSC packet receive
-                        digitalWrite(AIO::LED_RED, LOW);
-                        digitalWrite(AIO::LED_BLUE, !digitalRead(AIO::LED_BLUE));
                         msg.route("/s", set_setpoint);
                         msg.dispatch("/enable", enable);
                     }
@@ -149,6 +152,7 @@ void setup()
 
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
         Serial.println("FATAL: Cannot initialize ethernet hardware");
+        digitalWrite(AIO::LED_RED, HIGH);
         for (;;);
     } else {
         Serial.print("Ethernet hardware type: ");
