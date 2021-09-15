@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+import sys
+
+if getattr(sys, 'frozen', False):
+    import os
+    os.environ['PYGLFW_LIBRARY'] = f'{sys._MEIPASS}/libglfw.3.dylib'
+
 import time
 import click
 
@@ -89,4 +95,10 @@ def run(ip, port, period):
 
 
 if __name__ == '__main__':
-    run()
+    if getattr(sys, 'frozen', False):
+        import logging
+
+        logging.basicConfig(level=logging.INFO)
+        AtonalApp('192.168.1.20', 8888, 100).main_loop()
+    else:
+        run()
