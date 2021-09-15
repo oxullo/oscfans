@@ -33,14 +33,15 @@ void FansController::update()
 
 void FansController::reset()
 {
+    delay(10);
     for (uint8_t i = 0; i < FANS_COUNT; ++i) {
         fans[i].reset();
     }
-    delay(10);
 }
 
 void FansController::enable(bool run)
 {
+    delay(10);
     for (uint8_t i = 0; i < FANS_COUNT; ++i) {
         fans[i].set_enabled(run);
     }
