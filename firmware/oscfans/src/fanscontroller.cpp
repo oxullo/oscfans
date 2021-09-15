@@ -21,9 +21,13 @@ void FansController::begin()
 
 void FansController::update()
 {
-    for (uint8_t i = 0; i < FANS_COUNT; ++i) {
-        fans[i].update();
-        delay(UPDATE_DELAY_MS);
+    static uint8_t current_fan = 0;
+    static uint32_t ts_last_update = 0;
+
+    if (millis() - ts_last_update > UPDATE_DELAY_MS) {
+        fans[current_fan].update();
+        ts_last_update = millis();
+        current_fan = (current_fan + 1) % FANS_COUNT;
     }
 }
 
