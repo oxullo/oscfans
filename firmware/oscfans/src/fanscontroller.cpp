@@ -47,9 +47,16 @@ void FansController::enable(bool run)
     }
 }
 
-void FansController::set_setpoint_percent(uint8_t address, float percent)
+bool FansController::set_setpoint_percent(uint8_t address, float percent)
 {
     uint16_t setpoint = min(max(percent, 0), 100) / 100.0 * 16383;
-    // TODO: something better than this shit
-    fans[address - 1].set_setpoint(setpoint);
+
+    if (address > HIGHEST_ADDR) {
+        return false;
+    }
+
+    uint8_t index = MODBUS_ADDR_TO_INDEX[address];
+    fans[index].set_setpoint(setpoint);
+
+    return true;
 }
