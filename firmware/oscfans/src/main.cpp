@@ -169,6 +169,12 @@ void setup()
     Serial.print("OSC endpoint port: ");
     Serial.println(OSC_PORT);
 
+    digitalWrite(AIO::LED_BLUE, HIGH);
+    digitalWrite(AIO::LED_RED, HIGH);
+    delay(2000);
+    digitalWrite(AIO::LED_BLUE, LOW);
+    digitalWrite(AIO::LED_RED, LOW);
+
     Serial.println("Initializing fans controllers");
     fans_controller.begin();
 
