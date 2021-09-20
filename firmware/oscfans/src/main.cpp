@@ -119,7 +119,15 @@ void handle_state()
         case STATE_WAIT_FOR_ETHLINK:
             if (Ethernet.linkStatus() == LinkON) {
                 change_state(STATE_READY);
+                digitalWrite(AIO::LED_BLUE, HIGH);
+                digitalWrite(AIO::LED_RED, HIGH);
+                digitalWrite(AIO::LED_GREEN, HIGH);
+
                 fans_controller.reset();
+
+                digitalWrite(AIO::LED_BLUE, LOW);
+                digitalWrite(AIO::LED_RED, LOW);
+                digitalWrite(AIO::LED_GREEN, LOW);
             }
 
             break;
@@ -190,8 +198,6 @@ void setup()
     digitalWrite(AIO::LED_BLUE, HIGH);
     digitalWrite(AIO::LED_RED, HIGH);
     delay(2000);
-    digitalWrite(AIO::LED_BLUE, LOW);
-    digitalWrite(AIO::LED_RED, LOW);
 
     Serial.println("Initializing fans controllers");
     fans_controller.begin();
