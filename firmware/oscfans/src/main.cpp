@@ -59,6 +59,23 @@ void set_setpoint(OSCMessage& msg, int addr_offset)
     fans_controller.set_setpoint_percent(addr, speed);
 }
 
+void set_all_setpoints(OSCMessage& msg)
+{
+    float speed1 = msg.getFloat(0);
+    float speed2 = msg.getFloat(1);
+
+#ifdef DEBUG
+    Serial.print("all setpoint ");
+    Serial.print(" speeds 1=");
+    Serial.print(speed1);
+    Serial.print(" 2=");
+    Serial.println(speed2);
+#endif
+
+    fans_controller.set_setpoint_percent(1, speed1);
+    fans_controller.set_setpoint_percent(2, speed2);
+}
+
 void enable(OSCMessage& msg)
 {
     bool run = msg.getInt(0) == 1;
@@ -122,6 +139,7 @@ void handle_state()
                     } else {
                         // Deassert error and toggle OSC packet receive
                         msg.route("/s", set_setpoint);
+                        msg.dispatch("/sa", set_all_setpoints);
                         msg.dispatch("/enable", enable);
                     }
                 }
