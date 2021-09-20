@@ -19,6 +19,7 @@ class Main(Window):
     def __init__(self, ip, port):
         super().__init__(label='Main')
         self._client = pythonosc.udp_client.SimpleUDPClient(ip, port)
+        self._speed = 0
 
     def _on_frame(self):
         if imgui.button('Enable'):
@@ -28,6 +29,10 @@ class Main(Window):
 
         if imgui.button('Disable'):
             self._client.send_message('/enable', 0)
+        
+        changed, self._speed = imgui.slider_float('Fans speed', self._speed, 0, 100)
+        if changed:
+            self._client.send_message(f'/sa', (self._speed, self._speed))
 
 
 class Sender(Window):
