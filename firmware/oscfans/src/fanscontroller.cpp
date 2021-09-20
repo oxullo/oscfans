@@ -5,7 +5,9 @@
  *      Author: xi
  */
 
-#include <fanscontroller.h>
+#include <AIO.h>
+
+#include "fanscontroller.h"
 
 FansController::FansController()
 {
@@ -25,7 +27,11 @@ void FansController::update()
     static uint32_t ts_last_update = 0;
 
     if (millis() - ts_last_update > UPDATE_DELAY_MS) {
-        fans[current_fan].update();
+        if (!fans[current_fan].update()) {
+            digitalWrite(AIO::LED_RED, HIGH);
+        } else {
+            digitalWrite(AIO::LED_RED, LOW);
+        }
         ts_last_update = millis();
         current_fan = (current_fan + 1) % FANS_COUNT;
     }
