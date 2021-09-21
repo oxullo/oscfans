@@ -12,7 +12,7 @@
 #include "fanscontroller.h"
 
 
-const char* VERSION = "v0.1.0";
+const char* VERSION = "v1.0.0";
 const uint32_t MODBUS_BAUDRATE = 115200;
 const uint16_t OSC_PORT = 8888;
 const uint32_t HEARTBEAT_PERIOD = 200;
